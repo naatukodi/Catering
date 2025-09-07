@@ -30,20 +30,31 @@ public sealed class ServiceAreasRepository : IServiceAreasRepository
         }
     }
 
-    public static async Task EnsureContainerExistsAsync(CosmosClient client, IConfiguration cfg)
+    public static async Task EnsureContainerExistsAsync(CosmosClient client, IConfiguration cfg, CancellationToken ct = default)
     {
         var dbId = cfg["Cosmos:DatabaseId"]!;
-        var cId = cfg["Cosmos:ServiceAreasContainerId"]!;
+        var svcId = cfg["Cosmos:ServiceAreasContainerId"]!;
 
-        var dbResponse = await client.CreateDatabaseIfNotExistsAsync(dbId);
-        var db = dbResponse.Database;
+        var dbResponse = await client.CreateDatabaseIfNotExistsAsync(dbId, cancellationToken: ct);
 
-        var containerProperties = new ContainerProperties(cId, partitionKeyPath: "/pincode")
+        var svcProps = new ContainerProperties(svcId, "/pincode")
         {
-            // Add indexing policy, unique keys, etc. if needed
+            IndexingPolicy = new IndexingPolicy
+            {
+                Automatic = true,
+                IndexingMode = IndexingMode.Consistent,
+                CompositeIndexes =
+                {
+                    new System.Collections.ObjectModel.Collection<CompositePath>
+                    {
+                        new CompositePath { Path = "/rank",      Order = CompositePathSortOrder.Descending },
+                        new CompositePath { Path = "/createdAt", Order = CompositePathSortOrder.Descending }
+                    }
+                }
+            }
         };
 
-        await db.CreateContainerIfNotExistsAsync(containerProperties);
+        await dbResponse.Database.CreateContainerIfNotExistsAsync(svcProps, cancellationToken: ct);
     }
 
     public async Task UpsertAsync(ServiceAreaDoc doc, CancellationToken ct = default)

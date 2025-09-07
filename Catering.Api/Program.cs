@@ -27,6 +27,7 @@ builder.Services.AddSingleton(sp =>
 builder.Services.AddScoped<IOrdersRepository, OrdersRepository>();
 builder.Services.AddScoped<ICatalogRepository, CatalogRepository>();
 builder.Services.AddScoped<IUsersRepository, UsersRepository>();
+builder.Services.AddScoped<IServiceAreasRepository, ServiceAreasRepository>();
 
 var app = builder.Build();
 

@@ -56,4 +56,16 @@ public sealed class OrdersController : ControllerBase
         var page = await _repo.ListByCustomerAsync(userId, pageSize, continuationToken, ct);
         return Ok(page);
     }
+
+    [HttpGet("by-caterer/{catererId}/day")]
+    public async Task<ActionResult<PagedResult<CatererOrderSummary>>> ListForCatererOnDay(
+        string catererId,
+        [FromQuery] DateTime dateUtc,                 // e.g., 2025-09-20
+        [FromQuery] int pageSize = 50,
+        [FromQuery] string? continuationToken = null,
+        CancellationToken ct = default)
+    {
+        var page = await _repo.ListByCatererAndDayAsync(catererId, dateUtc, pageSize, continuationToken, ct);
+        return Ok(page);
+    }
 }

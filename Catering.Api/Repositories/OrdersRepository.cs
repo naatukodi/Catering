@@ -87,4 +87,44 @@ public sealed class OrdersRepository : IOrdersRepository
         var page = await itr.ReadNextAsync(ct);
         return new PagedResult<OrderDoc>(page.Resource.ToList(), page.ContinuationToken);
     }
+
+    public async Task<PagedResult<Catering.Api.Models.CatererOrderSummary>> ListByCatererAndDayAsync(
+    string catererId,
+    DateTime dayUtc,
+    int pageSize = 50,
+    string? continuation = null,
+    CancellationToken ct = default)
+    {
+        // Normalize to day boundaries in UTC
+        var from = new DateTime(dayUtc.Year, dayUtc.Month, dayUtc.Day, 0, 0, 0, DateTimeKind.Utc);
+        var to = from.AddDays(1);
+
+        // Project only needed fields to keep RU low
+        var q = new QueryDefinition(@"
+            SELECT 
+                c.orderId       AS orderId,
+                c.eventDateTime AS eventDateTime,
+                c.status        AS status,
+                c.guestCount    AS guestCount,
+                c.location.pincode AS pincode,
+                c.location.address AS address,
+                c.package.name  AS packageName
+            FROM c
+            WHERE c.type = 'order'
+            AND c.catererId = @cid
+            AND c.eventDateTime >= @from
+            AND c.eventDateTime <  @to
+            ORDER BY c.eventDateTime ASC")
+            .WithParameter("@cid", catererId)
+            .WithParameter("@from", from)
+            .WithParameter("@to", to);
+
+        var opts = new QueryRequestOptions { MaxItemCount = pageSize };
+        var it = _container.GetItemQueryIterator<CatererOrderSummary>(q, continuation, opts);
+
+        if (!it.HasMoreResults) return new PagedResult<CatererOrderSummary>(Array.Empty<CatererOrderSummary>(), null);
+
+        var page = await it.ReadNextAsync(ct);
+        return new PagedResult<CatererOrderSummary>(page.Resource.ToList(), page.ContinuationToken);
+    }
 }
